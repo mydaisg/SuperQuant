@@ -1,0 +1,13 @@
+# config/strategies.yml
+active_strategies:
+  - name: "mean_reversion"
+    parameters:
+      lookback_period: 20
+      zscore_threshold: 2.0
+    allocation: 0.4
+    
+  - name: "momentum"
+    parameters:
+      lookback_period: 12
+      holding_period: 1
+    allocation: 0.6

@@ -1,0 +1,9 @@
+# config/risk_limits.yml
+position_limits:
+  max_position_size: 100000
+  max_sector_exposure: 0.3
+  max_single_stock_exposure: 0.1
+
+var_limits:
+  daily_var: -0.02
+  max_drawdown: -0.1

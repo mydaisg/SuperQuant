@@ -1,0 +1,33 @@
+quant_system/
+├── config/                 # 配置文件
+│   ├── database.yml
+│   ├── exchanges.yml
+│   └── strategies.yml
+├── data/                   # 数据管理
+│   ├── collection/
+│   ├── processing/
+│   └── storage/
+├── research/               # 策略研究
+│   ├── exploratory/
+│   ├── backtesting/
+│   └── optimization/
+├── strategies/             # 策略实现
+│   ├── alpha_research/
+│   ├── portfolio/
+│   └── execution/
+├── risk/                   # 风险管理
+│   ├── monitoring/
+│   ├── controls/
+│   └── reporting/
+├── execution/              # 交易执行
+│   ├── order_management/
+│   ├── broker_apis/
+│   └── performance/
+├── monitoring/             # 系统监控
+│   ├── dashboard/
+│   ├── alerts/
+│   └── logging/
+└── utils/                  # 工具函数
+    ├── database/
+    ├── performance/
+    └── reporting/

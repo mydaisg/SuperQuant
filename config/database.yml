@@ -1,0 +1,6 @@
+database:
+  host: "localhost"
+  port: 5432
+  name: "quant_trading"
+  username: "quant_user"
+  password: "secure_password"
