@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: GPL-3
 # @brief/ Description
 
-quant_system/
+1、quant_system/
 ├── config/                 # 配置文件
 │   ├── database.yml
 │   ├── exchanges.yml
@@ -40,6 +40,8 @@ quant_system/
     └── reporting/
     
     
+2、 /opt/github/SuperQuant/tree
+.
 ├── LICENSE
 ├── ListDir.txt
 ├── README.md
@@ -113,12 +115,31 @@ quant_system/
 │   └── reporting
 │       ├── regulatory_report.R
 │       └── risk_report.R
-└── strategies
-    ├── alpha_research
-    │   ├── alpha_research_engine.R
-    │   └── strategy_framework.R
-    ├── portfolio
-    │   └── portfolio_optimizer.R
-    └── run_complete_strategy_system.R
+├── strategies
+│   ├── alpha_research
+│   │   ├── alpha_research_engine.R
+│   │   └── strategy_framework.R
+│   ├── portfolio
+│   │   └── portfolio_optimizer.R
+│   └── run_complete_strategy_system.R
+└── utils
+    ├── ListDir.txt
+    ├── database
+    │   ├── db_connections.R
+    │   └── query_builder.R
+    ├── financial
+    │   └── calendar_utils.R
+    ├── init_utils.R
+    ├── math
+    │   └── statistical_tests.R
+    ├── performance
+    │   ├── performance_metrics.R
+    │   └── risk_metrics.R
+    ├── reporting
+    │   ├── chart_generators.R
+    │   └── report_templates.R
+    └── system
+        ├── config_loader.R
+        └── error_handler.R
 
-26 directories, 55 files
+33 directories, 67 files
