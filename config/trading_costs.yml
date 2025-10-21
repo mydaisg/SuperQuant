@@ -1,0 +1,51 @@
+# @author: my@daisg.com
+# @date: 2025-10-21
+# @version: 0.1
+# Copyright (c) 2025 daisg
+# SPDX-License-Identifier: GPL-3
+# @brief/ Description
+# 交易成本配置
+commission: 0.0005  # 默认佣金率 0.05%
+avg_spread_bps: 2   # 平均价差 (基点)
+
+# 市场冲击参数
+market_impact_linear: 0.0001    # 线性冲击系数
+market_impact_square_root: 0.001  # 平方根冲击系数
+
+# 标的特定参数
+symbols:
+  AAPL:
+    commission: 0.0005
+    avg_spread_bps: 1.5
+    liquidity_tier: "HIGH"
+    
+  GOOGL:
+    commission: 0.0005  
+    avg_spread_bps: 2.0
+    liquidity_tier: "HIGH"
+    
+  TSLA:
+    commission: 0.0008
+    avg_spread_bps: 3.0
+    liquidity_tier: "MEDIUM"
+
+# 紧急程度因子
+urgency_factors:
+  LOW: 0.5
+  NORMAL: 1.0
+  HIGH: 2.0
+  URGENT: 5.0
+
+# 算法交易参数
+algorithm_params:
+  TWAP:
+    max_participation: 0.1    # 最大参与率 10%
+    min_interval: 60          # 最小间隔 60秒
+    
+  VWAP:
+    max_participation: 0.15   # 最大参与率 15%
+    volume_sensitivity: 0.8   # 成交量敏感度
+    
+  POV:
+    target_participation: 0.1 # 目标参与率 10%
+    adjust_frequency: 30      # 调整频率 30秒

@@ -1,394 +1,473 @@
-# execution/order_management/order_manager.R
 # @author: my@daisg.com
 # @date: 2025-10-21
-# @version: 0.1
+# @version: 0.2
 # Copyright (c) 2025 daisg
 # SPDX-License-Identifier: GPL-3
 # @brief/ Description
 #' 订单管理器
-OrderManager <- R6::R6Class(
-  "OrderManager",
-  public = list(
-    initialize = function(config_path = "config/execution.yml") {
-      private$execution_config <- yaml::read_yaml(config_path)
-      private$initialize_order_types()
-      private$initialize_broker_connections()
-    },
-    
-    # 创建订单
-    create_order = function(symbol, quantity, order_type, limit_price = NULL, 
-                            stop_price = NULL, time_in_force = "GTC") {
-      cat("创建订单:", symbol, quantity, order_type, "\n")
-      
-      order <- list(
-        order_id = private$generate_order_id(),
-        symbol = symbol,
-        quantity = quantity,
-        order_type = order_type,
-        limit_price = limit_price,
-        stop_price = stop_price,
-        time_in_force = time_in_force,
-        status = "PENDING",
-        created_at = Sys.time(),
-        filled_quantity = 0,
-        average_price = 0
-      )
-      
-      # 验证订单
-      validation_result <- private$validate_order(order)
-      if (!validation_result$valid) {
-        order$status <- "REJECTED"
-        order$rejection_reason <- validation_result$reason
-        warning("订单被拒绝: ", validation_result$reason)
-      }
-      
-      return(order)
-    },
-    
-    # 提交订单
-    submit_order = function(order, broker = "default") {
-      cat("提交订单到经纪商:", broker, "\n")
-      
-      if (order$status == "REJECTED") {
-        warning("订单已被拒绝，无法提交")
-        return(order)
-      }
-      
-      tryCatch({
-        # 选择经纪商
-        broker_conn <- private$get_broker_connection(broker)
-        
-        # 提交订单
-        submission_result <- broker_conn$submit_order(order)
-        
-        # 更新订单状态
-        order$status <- submission_result$status
-        order$broker_order_id <- submission_result$broker_order_id
-        order$submitted_at <- Sys.time()
-        
-        cat("订单提交成功，状态:", order$status, "\n")
-        
-      }, error = function(e) {
-        order$status <- "ERROR"
-        order$error_message <- e$message
-        warning("订单提交失败: ", e$message)
-      })
-      
-      return(order)
-    },
-    
-    # 批量订单管理
-    submit_batch_orders = function(orders, broker = "default") {
-      cat("提交批量订单，数量:", length(orders), "\n")
-      
-      submitted_orders <- list()
-      
-      for (i in seq_along(orders)) {
-        cat("提交订单", i, "/", length(orders), "\n")
-        submitted_orders[[i]] <- self$submit_order(orders[[i]], broker)
-        
-        # 遵守速率限制
-        if (i < length(orders)) {
-          Sys.sleep(private$execution_config$rate_limits$order_submission)
-        }
-      }
-      
-      return(submitted_orders)
-    },
-    
-    # 取消订单
-    cancel_order = function(order, broker = "default") {
-      cat("取消订单:", order$order_id, "\n")
-      
-      tryCatch({
-        broker_conn <- private$get_broker_connection(broker)
-        cancellation_result <- broker_conn$cancel_order(order$broker_order_id)
-        
-        order$status <- "CANCELLED"
-        order$cancelled_at <- Sys.time()
-        
-        cat("订单取消成功\n")
-        
-      }, error = function(e) {
-        warning("订单取消失败: ", e$message)
-      })
-      
-      return(order)
-    },
-    
-    # 修改订单
-    modify_order = function(order, new_quantity = NULL, new_price = NULL, broker = "default") {
-      cat("修改订单:", order$order_id, "\n")
-      
-      # 创建修改后的订单
-      modified_order <- order
-      if (!is.null(new_quantity)) {
-        modified_order$quantity <- new_quantity
-      }
-      if (!is.null(new_price)) {
-        modified_order$limit_price <- new_price
-      }
-      
-      # 验证修改
-      validation_result <- private$validate_order(modified_order)
-      if (!validation_result$valid) {
-        warning("订单修改无效: ", validation_result$reason)
-        return(order)
-      }
-      
-      # 先取消原订单
-      cancelled_order <- self$cancel_order(order, broker)
-      if (cancelled_order$status != "CANCELLED") {
-        warning("原订单取消失败，无法修改")
-        return(order)
-      }
-      
-      # 提交新订单
-      new_order <- self$create_order(
-        symbol = modified_order$symbol,
-        quantity = modified_order$quantity,
-        order_type = modified_order$order_type,
-        limit_price = modified_order$limit_price,
-        time_in_force = modified_order$time_in_force
-      )
-      
-      return(self$submit_order(new_order, broker))
-    },
-    
-    # 查询订单状态
-    get_order_status = function(order, broker = "default") {
-      tryCatch({
-        broker_conn <- private$get_broker_connection(broker)
-        status <- broker_conn$get_order_status(order$broker_order_id)
-        
-        # 更新订单状态
-        order$status <- status$status
-        order$filled_quantity <- status$filled_quantity
-        order$average_price <- status$average_price
-        
-        if (status$status == "FILLED") {
-          order$filled_at <- Sys.time()
-        }
-        
-        return(order)
-        
-      }, error = function(e) {
-        warning("查询订单状态失败: ", e$message)
-        return(order)
-      })
-    },
-    
-    # 订单簿管理
-    manage_order_book = function(orders, auto_cancel_stale = TRUE, stale_threshold_minutes = 30) {
-      cat("管理订单簿...\n")
-      
-      updated_orders <- list()
-      cancelled_count <- 0
-      
-      for (i in seq_along(orders)) {
-        order <- orders[[i]]
-        
-        # 更新订单状态
-        updated_order <- self$get_order_status(order)
-        
-        # 自动取消陈旧订单
-        if (auto_cancel_stale && private$is_order_stale(updated_order, stale_threshold_minutes)) {
-          updated_order <- self$cancel_order(updated_order)
-          cancelled_count <- cancelled_count + 1
-        }
-        
-        updated_orders[[i]] <- updated_order
-      }
-      
-      cat("订单簿管理完成，取消了", cancelled_count, "个陈旧订单\n")
-      return(updated_orders)
-    },
-    
-    # 生成执行报告
-    generate_execution_report = function(orders, start_date, end_date) {
-      cat("生成执行报告...\n")
-      
-      # 过滤时间范围内的订单
-      period_orders <- private$filter_orders_by_period(orders, start_date, end_date)
-      
-      report <- list(
-        period = list(start = start_date, end = end_date),
-        order_summary = private$summarize_orders(period_orders),
-        execution_quality = private$analyze_execution_quality(period_orders),
-        recommendations = private$generate_execution_recommendations(period_orders)
-      )
-      
-      return(report)
-    }
-  ),
-  
-  private = list(
-    execution_config = NULL,
-    order_types = list(),
-    broker_connections = list(),
-    order_counter = 0,
-    
-    initialize_order_types = function() {
-      private$order_types <- list(
-        MARKET = list(slippage = private$execution_config$slippage$market),
-        LIMIT = list(slippage = private$execution_config$slippage$limit),
-        STOP = list(slippage = private$execution_config$slippage$stop),
-        STOP_LIMIT = list(slippage = private$execution_config$slippage$stop_limit)
-      )
-    },
-    
-    initialize_broker_connections = function() {
-      # 初始化模拟经纪商连接
-      # 实际应用中应该连接到真实的经纪商API
-      private$broker_connections$default <- list(
-        submit_order = function(order) {
-          # 模拟订单提交
-          Sys.sleep(0.1)  # 模拟网络延迟
-          list(
-            status = "SUBMITTED",
-            broker_order_id = paste0("BROKER_", as.integer(Sys.time()))
-          )
-        },
-        cancel_order = function(broker_order_id) {
-          Sys.sleep(0.1)
-          list(success = TRUE)
-        },
-        get_order_status = function(broker_order_id) {
-          Sys.sleep(0.05)
-          # 模拟随机填充
-          fill_ratio <- runif(1, 0, 1)
-          status <- if (fill_ratio > 0.8) "FILLED" else "PARTIALLY_FILLED"
-          
-          list(
-            status = status,
-            filled_quantity = as.integer(fill_ratio * 100),  # 模拟数量
-            average_price = 100 * (1 + runif(1, -0.01, 0.01))  # 模拟价格
-          )
-        }
-      )
-    },
-    
-    generate_order_id = function() {
-      private$order_counter <- private$order_counter + 1
-      paste0("ORDER_", Sys.time(), "_", private$order_counter)
-    },
-    
-    validate_order = function(order) {
-      # 检查数量
-      if (order$quantity <= 0) {
-        return(list(valid = FALSE, reason = "数量必须为正"))
-      }
-      
-      # 检查价格（对于限价单）
-      if (order$order_type == "LIMIT" && is.null(order$limit_price)) {
-        return(list(valid = FALSE, reason = "限价单必须指定价格"))
-      }
-      
-      # 检查止损单
-      if (order$order_type == "STOP" && is.null(order$stop_price)) {
-        return(list(valid = FALSE, reason = "止损单必须指定止损价"))
-      }
-      
-      # 检查资金充足性（简化）
-      if (!private$check_sufficient_funds(order)) {
-        return(list(valid = FALSE, reason = "资金不足"))
-      }
-      
-      return(list(valid = TRUE, reason = ""))
-    },
-    
-    check_sufficient_funds = function(order) {
-      # 简化实现，实际应该检查账户余额
-      # 这里总是返回TRUE
-      TRUE
-    },
-    
-    get_broker_connection = function(broker) {
-      if (!broker %in% names(private$broker_connections)) {
-        stop("未知的经纪商: ", broker)
-      }
-      private$broker_connections[[broker]]
-    },
-    
-    is_order_stale = function(order, threshold_minutes) {
-      if (order$status %in% c("FILLED", "CANCELLED", "REJECTED")) {
-        return(FALSE)
-      }
-      
-      time_elapsed <- as.numeric(Sys.time() - order$created_at, units = "mins")
-      time_elapsed > threshold_minutes
-    },
-    
-    filter_orders_by_period = function(orders, start_date, end_date) {
-      Filter(function(order) {
-        order_time <- order$created_at
-        order_time >= start_date & order_time <= end_date
-      }, orders)
-    },
-    
-    summarize_orders = function(orders) {
-      summary <- list(
-        total_orders = length(orders),
-        filled_orders = sum(sapply(orders, function(o) o$status == "FILLED")),
-        pending_orders = sum(sapply(orders, function(o) o$status == "PENDING")),
-        cancelled_orders = sum(sapply(orders, function(o) o$status == "CANCELLED")),
-        total_quantity = sum(sapply(orders, function(o) o$quantity)),
-        filled_quantity = sum(sapply(orders, function(o) o$filled_quantity))
-      )
-      
-      return(summary)
-    },
-    
-    analyze_execution_quality = function(orders) {
-      filled_orders <- Filter(function(o) o$status == "FILLED", orders)
-      
-      if (length(filled_orders) == 0) {
-        return(list(
-          average_slippage = 0,
-          fill_rate = 0,
-          average_execution_time = 0
-        ))
-      }
-      
-      # 计算平均滑点（简化）
-      slippages <- sapply(filled_orders, function(o) {
-        abs(o$average_price - o$limit_price) / o$limit_price
-      })
-      
-      # 计算执行时间
-      execution_times <- sapply(filled_orders, function(o) {
-        as.numeric(o$filled_at - o$created_at, units = "secs")
-      })
-      
-      return(list(
-        average_slippage = mean(slippages, na.rm = TRUE),
-        fill_rate = sum(sapply(filled_orders, function(o) o$filled_quantity)) / 
-          sum(sapply(filled_orders, function(o) o$quantity)),
-        average_execution_time = mean(execution_times, na.rm = TRUE)
-      ))
-    },
-    
-    generate_execution_recommendations = function(orders) {
-      quality <- private$analyze_execution_quality(orders)
-      recommendations <- list()
-      
-      if (quality$average_slippage > 0.01) {  # 1%滑点
-        recommendations <- c(recommendations, "滑点较高，考虑使用限价单")
-      }
-      
-      if (quality$fill_rate < 0.8) {
-        recommendations <- c(recommendations, "成交率较低，检查订单价格")
-      }
-      
-      if (quality$average_execution_time > 60) {  # 60秒
-        recommendations <- c(recommendations, "执行时间较长，考虑更激进的订单类型")
-      }
-      
-      if (length(recommendations) == 0) {
-        recommendations <- "执行质量良好"
-      }
-      
-      return(recommendations)
-    }
-  )
+#' @description 管理订单的生命周期和状态
+#' @export
+OrderManager <- R6::R6Class("OrderManager",
+                            public = list(
+                              
+                              #' @field pending_orders 待处理订单
+                              pending_orders = list(),
+                              
+                              #' @field executed_orders 已执行订单
+                              executed_orders = list(),
+                              
+                              #' @field canceled_orders 已取消订单
+                              canceled_orders = list(),
+                              
+                              #' @field order_counter 订单计数器
+                              order_counter = 0,
+                              
+                              #' @field broker_api 券商API接口
+                              broker_api = NULL,
+                              
+                              #' @field system_logger 系统日志
+                              system_logger = NULL,
+                              
+                              #' @description 初始化订单管理器
+                              #' @param broker_api 券商API实例
+                              #' @param system_logger 系统日志实例
+                              initialize = function(broker_api = NULL, system_logger = NULL) {
+                                self$broker_api <- broker_api
+                                self$system_logger <- system_logger
+                                private$initialize_order_storage()
+                              },
+                              
+                              #' @description 创建新订单
+                              #' @param symbol 交易标的
+                              #' @param quantity 数量
+                              #' @param order_type 订单类型
+                              #' @param side 买卖方向
+                              #' @param price 价格(限价单需要)
+                              #' @param strategy 策略名称
+                              #' @param time_in_force 订单有效期
+                              #' @return 订单ID
+                              create_order = function(symbol, quantity, order_type = "MARKET", side = "BUY", 
+                                                      price = NULL, strategy = "system", time_in_force = "DAY") {
+                                
+                                # 生成订单ID
+                                order_id <- private$generate_order_id()
+                                
+                                # 创建订单对象
+                                order <- list(
+                                  order_id = order_id,
+                                  symbol = symbol,
+                                  quantity = quantity,
+                                  order_type = order_type,
+                                  side = side,
+                                  price = price,
+                                  strategy = strategy,
+                                  time_in_force = time_in_force,
+                                  status = "PENDING",
+                                  created_time = Sys.time(),
+                                  updated_time = Sys.time(),
+                                  fills = list(),
+                                  avg_fill_price = 0,
+                                  filled_quantity = 0,
+                                  remaining_quantity = quantity
+                                )
+                                
+                                # 验证订单
+                                if (!private$validate_order(order)) {
+                                  stop("订单验证失败")
+                                }
+                                
+                                # 保存订单
+                                self$pending_orders[[order_id]] <- order
+                                
+                                # 记录日志
+                                if (!is.null(self$system_logger)) {
+                                  self$system_logger$info(
+                                    sprintf("创建订单: %s %s %s %s @ %s", 
+                                            side, quantity, symbol, order_type, 
+                                            ifelse(is.null(price), "MARKET", as.character(price))),
+                                    component = "order_manager",
+                                    details = list(order_id = order_id, strategy = strategy)
+                                  )
+                                }
+                                
+                                return(order_id)
+                              },
+                              
+                              #' @description 提交订单到券商
+                              #' @param order_id 订单ID
+                              #' @return 逻辑值，是否成功提交
+                              submit_order = function(order_id) {
+                                if (is.null(self$pending_orders[[order_id]])) {
+                                  warning("订单不存在: ", order_id)
+                                  return(FALSE)
+                                }
+                                
+                                order <- self$pending_orders[[order_id]]
+                                
+                                # 检查订单状态
+                                if (order$status != "PENDING") {
+                                  warning("订单状态不是PENDING: ", order_id)
+                                  return(FALSE)
+                                }
+                                
+                                # 通过券商API提交订单
+                                if (!is.null(self$broker_api)) {
+                                  tryCatch({
+                                    submission_result <- self$broker_api$submit_order(order)
+                                    
+                                    if (submission_result$success) {
+                                      # 更新订单状态
+                                      order$status <- "SUBMITTED"
+                                      order$broker_order_id <- submission_result$broker_order_id
+                                      order$updated_time <- Sys.time()
+                                      
+                                      self$pending_orders[[order_id]] <- order
+                                      
+                                      # 记录日志
+                                      if (!is.null(self$system_logger)) {
+                                        self$system_logger$info(
+                                          sprintf("订单提交成功: %s", order_id),
+                                          component = "order_manager",
+                                          details = list(
+                                            broker_order_id = submission_result$broker_order_id,
+                                            symbol = order$symbol
+                                          )
+                                        )
+                                      }
+                                      
+                                      return(TRUE)
+                                    } else {
+                                      # 提交失败
+                                      order$status <- "REJECTED"
+                                      order$error_message <- submission_result$error_message
+                                      order$updated_time <- Sys.time()
+                                      
+                                      self$pending_orders[[order_id]] <- order
+                                      
+                                      # 记录错误日志
+                                      if (!is.null(self$system_logger)) {
+                                        self$system_logger$error(
+                                          sprintf("订单提交失败: %s - %s", order_id, submission_result$error_message),
+                                          component = "order_manager"
+                                        )
+                                      }
+                                      
+                                      return(FALSE)
+                                    }
+                                  }, error = function(e) {
+                                    # 异常处理
+                                    order$status <- "ERROR"
+                                    order$error_message <- e$message
+                                    order$updated_time <- Sys.time()
+                                    
+                                    self$pending_orders[[order_id]] <- order
+                                    
+                                    if (!is.null(self$system_logger)) {
+                                      self$system_logger$error(
+                                        sprintf("订单提交异常: %s - %s", order_id, e$message),
+                                        component = "order_manager"
+                                      )
+                                    }
+                                    
+                                    return(FALSE)
+                                  })
+                                } else {
+                                  # 模拟提交成功
+                                  order$status <- "SUBMITTED"
+                                  order$broker_order_id <- paste0("SIM_", order_id)
+                                  order$updated_time <- Sys.time()
+                                  
+                                  self$pending_orders[[order_id]] <- order
+                                  
+                                  if (!is.null(self$system_logger)) {
+                                    self$system_logger$info(
+                                      sprintf("模拟订单提交: %s", order_id),
+                                      component = "order_manager"
+                                    )
+                                  }
+                                  
+                                  return(TRUE)
+                                }
+                              },
+                              
+                              #' @description 取消订单
+                              #' @param order_id 订单ID
+                              #' @return 逻辑值，是否成功取消
+                              cancel_order = function(order_id) {
+                                if (is.null(self$pending_orders[[order_id]])) {
+                                  warning("订单不存在: ", order_id)
+                                  return(FALSE)
+                                }
+                                
+                                order <- self$pending_orders[[order_id]]
+                                
+                                # 检查订单状态是否可以取消
+                                if (!order$status %in% c("PENDING", "SUBMITTED", "PARTIALLY_FILLED")) {
+                                  warning("订单状态无法取消: ", order_id, " - ", order$status)
+                                  return(FALSE)
+                                }
+                                
+                                # 通过券商API取消订单
+                                if (!is.null(self$broker_api)) {
+                                  tryCatch({
+                                    cancel_result <- self$broker_api$cancel_order(order$broker_order_id)
+                                    
+                                    if (cancel_result$success) {
+                                      # 更新订单状态
+                                      order$status <- "CANCELED"
+                                      order$updated_time <- Sys.time()
+                                      order$canceled_time <- Sys.time()
+                                      
+                                      # 移动到取消订单列表
+                                      self$canceled_orders[[order_id]] <- order
+                                      self$pending_orders[[order_id]] <- NULL
+                                      
+                                      if (!is.null(self$system_logger)) {
+                                        self$system_logger$info(
+                                          sprintf("订单取消成功: %s", order_id),
+                                          component = "order_manager"
+                                        )
+                                      }
+                                      
+                                      return(TRUE)
+                                    } else {
+                                      if (!is.null(self$system_logger)) {
+                                        self$system_logger$warn(
+                                          sprintf("订单取消失败: %s - %s", order_id, cancel_result$error_message),
+                                          component = "order_manager"
+                                        )
+                                      }
+                                      return(FALSE)
+                                    }
+                                  }, error = function(e) {
+                                    if (!is.null(self$system_logger)) {
+                                      self$system_logger$error(
+                                        sprintf("订单取消异常: %s - %s", order_id, e$message),
+                                        component = "order_manager"
+                                      )
+                                    }
+                                    return(FALSE)
+                                  })
+                                } else {
+                                  # 模拟取消
+                                  order$status <- "CANCELED"
+                                  order$updated_time <- Sys.time()
+                                  order$canceled_time <- Sys.time()
+                                  
+                                  self$canceled_orders[[order_id]] <- order
+                                  self$pending_orders[[order_id]] <- NULL
+                                  
+                                  if (!is.null(self$system_logger)) {
+                                    self$system_logger$info(
+                                      sprintf("模拟订单取消: %s", order_id),
+                                      component = "order_manager"
+                                    )
+                                  }
+                                  
+                                  return(TRUE)
+                                }
+                              },
+                              
+                              #' @description 更新订单状态
+                              #' @param order_id 订单ID
+                              #' @param new_status 新状态
+                              #' @param fill_price 成交价格(可选)
+                              #' @param fill_quantity 成交数量(可选)
+                              #' @param fill_time 成交时间(可选)
+                              update_order_status = function(order_id, new_status, fill_price = NULL, 
+                                                             fill_quantity = NULL, fill_time = NULL) {
+                                if (is.null(self$pending_orders[[order_id]])) {
+                                  warning("订单不存在: ", order_id)
+                                  return(FALSE)
+                                }
+                                
+                                order <- self$pending_orders[[order_id]]
+                                old_status <- order$status
+                                
+                                # 更新订单状态
+                                order$status <- new_status
+                                order$updated_time <- Sys.time()
+                                
+                                # 处理成交信息
+                                if (!is.null(fill_price) && !is.null(fill_quantity) && fill_quantity > 0) {
+                                  fill <- list(
+                                    price = fill_price,
+                                    quantity = fill_quantity,
+                                    time = ifelse(is.null(fill_time), Sys.time(), fill_time)
+                                  )
+                                  
+                                  order$fills <- c(order$fills, list(fill))
+                                  
+                                  # 更新成交统计
+                                  total_filled <- sum(sapply(order$fills, function(f) f$quantity))
+                                  total_value <- sum(sapply(order$fills, function(f) f$price * f$quantity))
+                                  
+                                  order$filled_quantity <- total_filled
+                                  order$remaining_quantity <- order$quantity - total_filled
+                                  
+                                  if (total_filled > 0) {
+                                    order$avg_fill_price <- total_value / total_filled
+                                  }
+                                  
+                                  # 记录成交日志
+                                  if (!is.null(self$system_logger)) {
+                                    self$system_logger$info(
+                                      sprintf("订单成交: %s - %s @ %.4f", order_id, fill_quantity, fill_price),
+                                      component = "order_manager",
+                                      details = list(
+                                        symbol = order$symbol,
+                                        side = order$side,
+                                        total_filled = total_filled
+                                      )
+                                    )
+                                  }
+                                }
+                                
+                                # 如果订单完全成交，移动到已执行订单
+                                if (new_status == "FILLED" || order$filled_quantity == order$quantity) {
+                                  order$status <- "FILLED"
+                                  order$updated_time <- Sys.time()
+                                  
+                                  self$executed_orders[[order_id]] <- order
+                                  self$pending_orders[[order_id]] <- NULL
+                                  
+                                  if (!is.null(self$system_logger)) {
+                                    self$system_logger$info(
+                                      sprintf("订单完全成交: %s", order_id),
+                                      component = "order_manager"
+                                    )
+                                  }
+                                } else {
+                                  self$pending_orders[[order_id]] <- order
+                                }
+                                
+                                return(TRUE)
+                              },
+                              
+                              #' @description 获取订单信息
+                              #' @param order_id 订单ID
+                              #' @return 订单信息
+                              get_order = function(order_id) {
+                                # 在所有订单列表中查找
+                                if (!is.null(self$pending_orders[[order_id]])) {
+                                  return(self$pending_orders[[order_id]])
+                                } else if (!is.null(self$executed_orders[[order_id]])) {
+                                  return(self$executed_orders[[order_id]])
+                                } else if (!is.null(self$canceled_orders[[order_id]])) {
+                                  return(self$canceled_orders[[order_id]])
+                                } else {
+                                  return(NULL)
+                                }
+                              },
+                              
+                              #' @description 获取所有订单
+                              #' @param status 状态过滤
+                              #' @param strategy 策略过滤
+                              #' @param symbol 标的过滤
+                              #' @return 订单列表
+                              get_orders = function(status = NULL, strategy = NULL, symbol = NULL) {
+                                all_orders <- c(self$pending_orders, self$executed_orders, self$canceled_orders)
+                                
+                                # 应用过滤器
+                                if (!is.null(status)) {
+                                  all_orders <- Filter(function(x) x$status %in% status, all_orders)
+                                }
+                                
+                                if (!is.null(strategy)) {
+                                  all_orders <- Filter(function(x) x$strategy %in% strategy, all_orders)
+                                }
+                                
+                                if (!is.null(symbol)) {
+                                  all_orders <- Filter(function(x) x$symbol %in% symbol, all_orders)
+                                }
+                                
+                                return(all_orders)
+                              },
+                              
+                              #' @description 获取订单统计
+                              #' @return 统计信息
+                              get_order_stats = function() {
+                                list(
+                                  total_created = self$order_counter,
+                                  pending = length(self$pending_orders),
+                                  executed = length(self$executed_orders),
+                                  canceled = length(self$canceled_orders),
+                                  
+                                  pending_value = sum(sapply(self$pending_orders, function(x) {
+                                    ifelse(is.null(x$price), 0, x$quantity * x$price)
+                                  })),
+                                  
+                                  executed_value = sum(sapply(self$executed_orders, function(x) {
+                                    x$filled_quantity * x$avg_fill_price
+                                  }))
+                                )
+                              }
+                            ),
+                            
+                            private = list(
+                              
+                              #' @description 初始化订单存储
+                              initialize_order_storage = function() {
+                                # 可以在这里添加数据库初始化逻辑
+                                # 目前使用内存存储
+                                self$pending_orders <- list()
+                                self$executed_orders <- list()
+                                self$canceled_orders <- list()
+                                self$order_counter <- 0
+                              },
+                              
+                              #' @description 生成订单ID
+                              generate_order_id = function() {
+                                self$order_counter <- self$order_counter + 1
+                                timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
+                                sprintf("ORDER_%s_%06d", timestamp, self$order_counter)
+                              },
+                              
+                              #' @description 验证订单
+                              #' @param order 订单对象
+                              validate_order = function(order) {
+                                # 检查必要字段
+                                required_fields <- c("symbol", "quantity", "order_type", "side")
+                                for (field in required_fields) {
+                                  if (is.null(order[[field]])) {
+                                    warning("订单缺少必要字段: ", field)
+                                    return(FALSE)
+                                  }
+                                }
+                                
+                                # 检查数量
+                                if (order$quantity <= 0) {
+                                  warning("订单数量必须大于0")
+                                  return(FALSE)
+                                }
+                                
+                                # 检查订单类型
+                                valid_order_types <- c("MARKET", "LIMIT", "STOP", "STOP_LIMIT")
+                                if (!order$order_type %in% valid_order_types) {
+                                  warning("无效的订单类型: ", order$order_type)
+                                  return(FALSE)
+                                }
+                                
+                                # 检查买卖方向
+                                valid_sides <- c("BUY", "SELL")
+                                if (!order$side %in% valid_sides) {
+                                  warning("无效的买卖方向: ", order$side)
+                                  return(FALSE)
+                                }
+                                
+                                # 限价单必须指定价格
+                                if (order$order_type %in% c("LIMIT", "STOP_LIMIT") && is.null(order$price)) {
+                                  warning("限价单必须指定价格")
+                                  return(FALSE)
+                                }
+                                
+                                # 价格必须为正数
+                                if (!is.null(order$price) && order$price <= 0) {
+                                  warning("价格必须大于0")
+                                  return(FALSE)
+                                }
+                                
+                                return(TRUE)
+                              }
+                            )
 )
