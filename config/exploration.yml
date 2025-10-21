@@ -1,0 +1,71 @@
+# config/exploration.yml
+# @author: my@daisg.com
+# @date: 2025-10-21
+# @version: 0.1
+# Copyright (c) 2025 daisg
+# SPDX-License-Identifier: GPL-3
+# @brief/ Description
+# 探索性分析配置
+default_analyses:
+  - descriptive_stats
+  - distribution_analysis
+  - correlation_analysis
+  - time_series_analysis
+  - volatility_analysis
+  - regime_analysis
+
+analysis_parameters:
+  volatility_window: 20
+  correlation_threshold: 0.7
+  extreme_return_threshold: 3
+
+output:
+  plots_directory: "output/exploratory_plots"
+  reports_directory: "output/exploration_reports"
+
+# config/strategy_exploration.yml
+# 策略探索配置
+parameter_sampling:
+  n_samples: 100
+  method: "lhs"  # 拉丁超立方采样
+
+stability_analysis:
+  time_periods:
+    - name: "全样本"
+    - name: "前50%"
+    - name: "后50%"
+    - name: "最近一年"
+
+comparison:
+  metrics:
+    - sharpe_ratio
+    - total_return
+    - max_drawdown
+    - win_rate
+
+# config/optimization.yml
+# 优化配置
+grid_search:
+  max_combinations: 1000
+
+random_search:
+  max_iterations: 500
+
+bayesian:
+  acquisition_function: "ei"  # 期望改进
+  init_points: 10
+  iterations: 50
+
+genetic:
+  population_size: 50
+  generations: 100
+
+multi_objective:
+  objectives:
+    - sharpe_ratio
+    - total_return
+    - max_drawdown
+
+stopping_criteria:
+  improvement_tolerance: 0.001
+  max_iterations_no_improvement: 20

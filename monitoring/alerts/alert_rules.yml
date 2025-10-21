@@ -1,0 +1,42 @@
+# @author: my@daisg.com
+# @date: 2025-10-21
+# @version: 0.1
+# Copyright (c) 2025 daisg
+# SPDX-License-Identifier: GPL-3
+# @brief/ Description
+# 警报规则配置
+alert_rules:
+  high_drawdown_alert:
+    condition: "current_drawdown > 0.08"
+    severity: "high"
+    message_template: "回撤超过8%! 当前回撤: ${current_drawdown * 100}%"
+    channels: ["dashboard", "email"]
+    cooldown: 600
+    
+  high_volatility_alert:
+    condition: "volatility > 0.25"
+    severity: "medium" 
+    message_template: "波动率异常: ${volatility * 100}%"
+    channels: ["dashboard"]
+    cooldown: 300
+    
+  position_limit_alert:
+    condition: "position_violation == TRUE"
+    severity: "high"
+    message_template: "头寸限制违反: ${violation_details}"
+    channels: ["dashboard", "email"]
+    cooldown: 300
+    
+  system_error_alert:
+    condition: "system_errors > 0"
+    severity: "high"
+    message_template: "系统错误: ${system_errors}个未处理错误"
+    channels: ["dashboard", "email", "slack"]
+    cooldown: 60
+    
+  low_liquidity_alert:
+    condition: "liquidity_score < 0.3"
+    severity: "medium"
+    message_template: "流动性警告: ${symbol} 流动性评分 ${liquidity_score}"
+    channels: ["dashboard"]
+    cooldown: 1800

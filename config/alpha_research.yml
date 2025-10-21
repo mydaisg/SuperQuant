@@ -1,0 +1,129 @@
+# config/alpha_research.yml
+# @author: my@daisg.com
+# @date: 2025-10-21
+# @version: 0.1
+# Copyright (c) 2025 daisg
+# SPDX-License-Identifier: GPL-3
+# @brief/ Description
+# Alpha研究配置
+default_factor_types:
+  - price_based
+  - volume_based
+  - volatility_based
+  - technical
+
+price_based_factors:
+  momentum_periods: [21, 63, 252]
+  mean_reversion_periods: [5, 20]
+  lookback_periods: [20, 50, 100]
+
+volume_based_factors:
+  volume_momentum_periods: [5, 20]
+  divergence_lookback: 10
+
+volatility_based_factors:
+  volatility_windows: [5, 20]
+  realized_vol_periods: [5, 20]
+
+fundamental_based_factors:
+  # 需要基本面数据接入
+
+validation_periods:
+  full_sample:
+    start: "2010-01-01"
+    end: "2023-12-31"
+  first_half:
+    start: "2010-01-01"
+    end: "2016-12-31"
+  second_half:
+    start: "2017-01-01"
+    end: "2023-12-31"
+
+quality_thresholds:
+  min_ic: 0.05
+  min_quality_score: 3
+  significance_level: 0.05
+
+# config/portfolio.yml
+# 投资组合配置
+default_constraints:
+  min_weight: 0.0
+  max_weight: 0.1
+  max_sector_exposure: 0.3
+  max_tracking_error: 0.05
+
+risk_parity_constraints:
+  min_weight: 0.01
+  max_weight: 0.15
+  convergence_tolerance: 1e-6
+
+optimization_methods:
+  mean_variance:
+    risk_aversion: 1.0
+  black_litterman:
+    tau: 0.05
+  robust:
+    uncertainty_level: 0.1
+
+rebalancing:
+  frequency: "monthly"
+  tolerance_bands: 0.02
+
+# config/execution.yml
+# 交易执行配置
+slippage:
+  market: 0.0010
+  limit: 0.0005
+  stop: 0.0015
+  stop_limit: 0.0010
+
+commission:
+  fixed: 1.0
+  per_share: 0.005
+  percentage: 0.0005
+
+fees:
+  regulatory: 0.000119
+  trading_activity: 0.000144
+  clearing: 0.02
+
+market_impact:
+  base_rate: 0.0001
+  exponent: 0.5
+  base_volatility: 0.2
+  volatility_sensitivity: 1.0
+  urgency_multipliers:
+    low: 0.7
+    normal: 1.0
+    high: 1.5
+
+opportunity_cost:
+  average_delay: 1
+
+timing_cost:
+  base_rate: 0.0001
+  urgency_multipliers:
+    low: 0.5
+    normal: 1.0
+    high: 2.0
+
+execution_times:
+  immediate: 1
+  passive: 300
+  vwap: 1800
+  twap: 3600
+
+rate_limits:
+  order_submission: 0.1
+
+# config/trading_costs.yml
+# 交易成本配置
+execution_constraints:
+  price_improvement: 0.001
+  fill_probability_passive: 0.6
+  fill_probability_vwap: 0.9
+  fill_probability_twap: 0.95
+
+alerts:
+  total_cost_threshold_bps: 20
+  market_impact_ratio_threshold: 0.7

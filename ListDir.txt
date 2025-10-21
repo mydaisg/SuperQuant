@@ -40,40 +40,72 @@ quant_system/
     └── reporting/
     
     
-    /opt/github/SuperQuant
 ├── LICENSE
 ├── ListDir.txt
 ├── README.md
 ├── config
+│   ├── alpha_research.yml
 │   ├── data_quality.yml
 │   ├── database.yml
+│   ├── exploration.yml
+│   ├── logging.yml
 │   ├── risk_limits.yml
+│   ├── risk_limits2.yml
 │   └── strategies.yml
 ├── data
 │   ├── collection
 │   │   └── market_data.R
-│   └── processing
-│       ├── data_cleaning.R
-│       ├── feature_engineering.R
-│       └── gh_sample.R
+│   ├── processing
+│   │   ├── data_cleaning.R
+│   │   ├── feature_engineering.R
+│   │   └── gh_sample.R
+│   └── storage
+│       ├── cache_manager.R
+│       └── database_manager.R
 ├── execution
+│   ├── cost_models
+│   │   └── trading_cost_model.R
 │   └── order_management
-│       └── execution_engine.R
+│       ├── execution_engine.R
+│       └── order_manager.R
 ├── main.R
 ├── monitoring
-│   └── dashboard
-│       └── dashboard_app.R
+│   ├── alerts
+│   │   ├── alert_manager.R
+│   │   └── alert_rules.yml
+│   ├── dashboard
+│   │   ├── dashboard_app.R
+│   │   └── dashboard_app_old.R
+│   ├── gh_main.R
+│   └── logging
+│       ├── performance_logger.R
+│       └── system_logger.R
 ├── research
-│   └── backtesting
-│       └── backtest_engine.R
+│   ├── backtesting
+│   │   └── backtest_engine.R
+│   ├── exploratory
+│   │   ├── data_explorer.R
+│   │   └── strategy_explorer.R
+│   ├── gh_example.R
+│   └── optimization
+│       └── parameter_optimizer.R
 ├── risk
-│   └── monitoring
-│       └── risk_manager.R
-├── storage
-│   ├── cache_manager.R
-│   └── database_manager.R
+│   ├── controls
+│   │   ├── drawdown_control.R
+│   │   ├── position_limits.R
+│   │   └── stop_loss.R
+│   ├── monitoring
+│   │   ├── risk_manager.R
+│   │   └── risk_manager2.R
+│   └── reporting
+│       ├── regulatory_report.R
+│       └── risk_report.R
 └── strategies
-    └── alpha_research
-        └── strategy_framework.R
+    ├── alpha_research
+    │   ├── alpha_research_engine.R
+    │   └── strategy_framework.R
+    ├── portfolio
+    │   └── portfolio_optimizer.R
+    └── run_complete_strategy_system.R
 
-16 directories, 19 files
+24 directories, 44 files
