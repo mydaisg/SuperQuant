@@ -1,3 +1,10 @@
+# @author: my@daisg.com
+# @date: 2025-10-21
+# @version: 0.1
+# Copyright (c) 2025 daisg
+# SPDX-License-Identifier: GPL-3
+# @brief/ Description
+
 quant_system/
 ├── config/                 # 配置文件
 │   ├── database.yml

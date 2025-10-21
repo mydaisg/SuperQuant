@@ -1,4 +1,10 @@
-# SuperQuant
+# @author: my@daisg.com
+# @date: 2025-10-21
+# @version: 0.1
+# Copyright (c) 2025 daisg
+# SPDX-License-Identifier: GPL-3
+# @brief/ Description
+## SuperQuant
 Quantitative Trading Machine Learning with R+Rust & AI（Web,CLI,API）
 
 

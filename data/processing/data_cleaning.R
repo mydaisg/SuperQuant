@@ -1,4 +1,10 @@
 # /opt/github/data/processing/data_cleaning.R
+# @author: my@daisg.com
+# @date: 2025-10-21
+# @version: 0.1
+# Copyright (c) 2025 daisg
+# SPDX-License-Identifier: GPL-3
+# @brief/ Description
 #' 1. 数据清洗管道(数据清洗管理器)
 DataCleaningManager <- R6::R6Class(
   "DataCleaningManager",

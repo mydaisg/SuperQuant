@@ -1,3 +1,9 @@
+# @author: my@daisg.com
+# @date: 2025-10-21
+# @version: 0.1
+# Copyright (c) 2025 daisg
+# SPDX-License-Identifier: GPL-3
+# @brief/ Description
 # 完整的数据处理流水线运行验证
 ## 这个数据处理存储系统特点
 # 健壮的数据清洗 - 处理缺失值、异常值、重复数据
@@ -51,7 +57,7 @@ run_data_pipeline <- function(symbols, start_date, end_date) {
 
 # 运行管道
 symbols <- c("AAPL", "MSFT", "GOOGL")
-start_date <- "2023-01-01"
-end_date <- "2023-12-31"
+start_date <- "2025-01-01"
+end_date <- "2025-10-20"
 
 processed_data <- run_data_pipeline(symbols, start_date, end_date)
