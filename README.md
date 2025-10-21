@@ -7,15 +7,15 @@
 ## SuperQuant
 Quantitative Trading Machine Learning with R+Rust & AI（Web,CLI,API）
 
-
-1. 数据处理 (processing)
+一、功能说明（部分）
+数据处理 (processing)
 在数据处理模块，实现以下功能：
 数据清洗：处理缺失值、异常值等。
 数据转换：标准化、归一化、对数化等。
 特征工程：技术指标计算、因子构建等。
 数据验证：确保数据质量和一致性。
 
-2. 数据存储 (storage)
+数据存储 (storage)
 在数据存储模块，实现以下功能：
 数据库连接管理（支持多种数据库，如SQLite、PostgreSQL、MySQL等）。
 数据表的创建、更新、删除。
@@ -34,3 +34,37 @@ optimization/下的程序：
 优化算法：使用更高效的优化方法（如贝叶斯优化）来寻找最优参数。
 结果分析：绘制优化结果、参数重要性等。
 
+二、目录结构
+quant_system/
+├── config/                 # 配置文件
+│   ├── database.yml
+│   ├── exchanges.yml
+│   └── strategies.yml
+├── data/                   # 数据管理
+│   ├── collection/
+│   ├── processing/
+│   └── storage/
+├── research/               # 策略研究
+│   ├── exploratory/
+│   ├── backtesting/
+│   └── optimization/
+├── strategies/             # 策略实现
+│   ├── alpha_research/
+│   ├── portfolio/
+│   └── execution/
+├── risk/                   # 风险管理
+│   ├── monitoring/
+│   ├── controls/
+│   └── reporting/
+├── execution/              # 交易执行
+│   ├── order_management/
+│   ├── broker_apis/
+│   └── performance/
+├── monitoring/             # 系统监控
+│   ├── dashboard/
+│   ├── alerts/
+│   └── logging/
+└── utils/                  # 工具函数
+    ├── database/
+    ├── performance/
+    └── reporting/
