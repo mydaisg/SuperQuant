@@ -6,8 +6,10 @@
 # @brief/ Description
 ## SuperQuant
 Quantitative Trading Machine Learning with R+Rust & AI（Web,CLI,API）
+(一套完整架构的量化自动交易系统)
 
-一、功能说明（部分）
+一、数据处理模块
+
 数据处理 (processing)
 在数据处理模块，实现以下功能：
 数据清洗：处理缺失值、异常值等。
@@ -22,6 +24,7 @@ Quantitative Trading Machine Learning with R+Rust & AI（Web,CLI,API）
 数据的插入、查询、更新、删除（CRUD）操作。
 缓存管理（使用Redis或内存缓存）。
 
+二、策略研究模块
 exploratory/ 目录用于策略的探索性分析，包括数据可视化、基础统计、相关性分析等。
 optimization/ 目录用于策略参数的优化，包括参数扫描、优化算法等。
 exploratory/下的程序：
@@ -34,13 +37,38 @@ optimization/下的程序：
 优化算法：使用更高效的优化方法（如贝叶斯优化）来寻找最优参数。
 结果分析：绘制优化结果、参数重要性等。
 
+
+八、工具模块
 database/：数据库相关的工具函数，如连接数据库、读取数据、写入数据等。
-
 performance/：性能分析相关的工具函数，如计算收益率、最大回撤、夏普比率等。
-
 reporting/：报告生成相关的工具函数，如生成交易报告、风险报告等。
-
-二、目录结构
+utils/
+├── database/              # 数据库工具
+│   ├── db_connections.R
+│   ├── query_builder.R
+│   └── data_validation.R
+├── performance/          # 性能分析工具
+│   ├── performance_metrics.R
+│   ├── risk_metrics.R
+│   └── benchmark_tools.R
+├── reporting/            # 报告生成工具
+│   ├── report_templates.R
+│   ├── chart_generators.R
+│   └── export_formats.R
+├── math/                 # 数学工具
+│   ├── statistical_tests.R
+│   ├── time_series_analysis.R
+│   └── optimization_utils.R
+├── system/               # 系统工具
+│   ├── config_loader.R
+│   ├── error_handler.R
+│   └── package_manager.R
+└── financial/           # 金融工具
+    ├── calendar_utils.R
+    ├── instrument_utils.R
+    └── pricing_utils.R
+    
+十、目录结构
 quant_system/
 ├── config/                 # 配置文件
 │   ├── database.yml
