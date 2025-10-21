@@ -1,0 +1,25 @@
+utils/
+├── database/              # 数据库工具
+│   ├── db_connections.R
+│   ├── query_builder.R
+│   └── data_validation.R
+├── performance/          # 性能分析工具
+│   ├── performance_metrics.R
+│   ├── risk_metrics.R
+│   └── benchmark_tools.R
+├── reporting/            # 报告生成工具
+│   ├── report_templates.R
+│   ├── chart_generators.R
+│   └── export_formats.R
+├── math/                 # 数学工具
+│   ├── statistical_tests.R
+│   ├── time_series_analysis.R
+│   └── optimization_utils.R
+├── system/               # 系统工具
+│   ├── config_loader.R
+│   ├── error_handler.R
+│   └── package_manager.R
+└── financial/           # 金融工具
+    ├── calendar_utils.R
+    ├── instrument_utils.R
+    └── pricing_utils.R

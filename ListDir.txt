@@ -51,7 +51,8 @@ quant_system/
 │   ├── logging.yml
 │   ├── risk_limits.yml
 │   ├── risk_limits2.yml
-│   └── strategies.yml
+│   ├── strategies.yml
+│   └── trading_costs.yml
 ├── data
 │   ├── collection
 │   │   └── market_data.R
@@ -63,11 +64,23 @@ quant_system/
 │       ├── cache_manager.R
 │       └── database_manager.R
 ├── execution
+│   ├── broker_apis
+│   │   ├── broker_interface.R
+│   │   ├── ib_broker.R
+│   │   └── simulated_broker.R
 │   ├── cost_models
-│   │   └── trading_cost_model.R
-│   └── order_management
-│       ├── execution_engine.R
-│       └── order_manager.R
+│   │   ├── trading_cost_model.R
+│   │   └── trading_cost_model_old.R
+│   ├── gh_main.R
+│   ├── order_management
+│   │   ├── execution_algorithms.R
+│   │   ├── execution_engine.R
+│   │   ├── execution_engine_old.R
+│   │   ├── order_manager.R
+│   │   └── order_manager_old.R
+│   └── performance
+│       ├── execution_analyzer.R
+│       └── slippage_analyzer.R
 ├── main.R
 ├── monitoring
 │   ├── alerts
@@ -108,4 +121,4 @@ quant_system/
     │   └── portfolio_optimizer.R
     └── run_complete_strategy_system.R
 
-24 directories, 44 files
+26 directories, 55 files
