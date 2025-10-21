@@ -31,3 +31,42 @@ quant_system/
     ├── database/
     ├── performance/
     └── reporting/
+    
+    
+    /opt/github/SuperQuant
+├── LICENSE
+├── ListDir.txt
+├── README.md
+├── config
+│   ├── data_quality.yml
+│   ├── database.yml
+│   ├── risk_limits.yml
+│   └── strategies.yml
+├── data
+│   ├── collection
+│   │   └── market_data.R
+│   └── processing
+│       ├── data_cleaning.R
+│       ├── feature_engineering.R
+│       └── gh_sample.R
+├── execution
+│   └── order_management
+│       └── execution_engine.R
+├── main.R
+├── monitoring
+│   └── dashboard
+│       └── dashboard_app.R
+├── research
+│   └── backtesting
+│       └── backtest_engine.R
+├── risk
+│   └── monitoring
+│       └── risk_manager.R
+├── storage
+│   ├── cache_manager.R
+│   └── database_manager.R
+└── strategies
+    └── alpha_research
+        └── strategy_framework.R
+
+16 directories, 19 files

@@ -1,0 +1,94 @@
+# config/data_quality.yml
+# 数据质量配置
+required_columns: ["timestamp", "open", "high", "low", "close", "volume"]
+critical_columns: ["timestamp", "close"]
+
+price_thresholds:
+  price_jump: 5        # 5倍MAD
+  extreme_return: 0.1  # 10%单日收益率
+
+volume_thresholds:
+  volume_spike: 5      # 5倍MAD
+
+time_gaps:
+  max_allowed_gap: 86400  # 最大允许间隔（秒）
+
+fundamental_sanity:
+  min_pe_ratio: 0
+  max_pe_ratio: 1000
+
+smoothing:
+  enabled: true
+  columns: ["open", "high", "low", "close"]
+
+# config/features.yml
+# 特征工程配置
+technical_indicators:
+  moving_averages:
+    enabled: true
+    periods: [5, 10, 20, 50]
+  rsi:
+    enabled: true
+    period: 14
+  macd:
+    enabled: true
+    fast: 12
+    slow: 26
+    signal: 9
+  bollinger_bands:
+    enabled: true
+    period: 20
+    sd: 2
+
+volume_indicators:
+  volume_ma:
+    enabled: true
+    periods: [5, 20]
+  volume_ratio:
+    enabled: true
+    period: 20
+
+volatility_measures:
+  historical_volatility:
+    enabled: true
+    period: 20
+  atr:
+    enabled: true
+    period: 14
+  parkinson_volatility:
+    enabled: true
+    period: 20
+
+pattern_indicators:
+  price_position:
+    enabled: true
+    lookback: 20
+  momentum:
+    enabled: true
+    periods: [5, 10, 20]
+  acceleration:
+    enabled: true
+
+feature_selection:
+  enabled: true
+  remove_low_variance: true
+  remove_high_correlation: true
+  variance_threshold: 0.01
+  correlation_threshold: 0.95
+
+# config/cache.yml
+# 缓存配置
+memory_cache:
+  max_items: 1000
+
+disk_cache:
+  enabled: true
+  directory: "./cache"
+  max_size_mb: 1000
+  allowed_types: ["market_data", "features"]
+
+default_ttl:
+  market_data: 300      # 5分钟
+  features: 1800        # 30分钟
+  model: 86400          # 24小时
+  default: 600          # 10分钟
